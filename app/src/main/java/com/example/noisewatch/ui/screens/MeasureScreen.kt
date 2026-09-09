@@ -1,5 +1,9 @@
 package com.example.noisewatch.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,32 +13,110 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.example.noisewatch.ui.theme.DeepNavyCharcoal
+import com.example.noisewatch.ui.theme.MutedAmberGold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeasureScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartMeasurement: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    var permissionDeniedMessage by remember { mutableStateOf<String?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            permissionDeniedMessage = null
+            onStartMeasurement()
+        } else {
+            permissionDeniedMessage = "Microphone permission is required to measure sound levels. Please grant permission to take a measurement."
+        }
+    }
+
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(text = "Microphone Access Required")
+            },
+            text = {
+                Text(text = "NoiseWatch uses your microphone to estimate surrounding sound levels. Audio is analysed on your device and is not recorded or stored.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPermissionDialog = false
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                ) {
+                    Text(text = "Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showPermissionDialog = false }
+                ) {
+                    Text(text = "Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = { Text(text = "NoiseWatch") }
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "NoiseWatch",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = DeepNavyCharcoal
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { innerPadding ->
@@ -42,51 +124,105 @@ fun MeasureScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = Icons.Default.GraphicEq,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Main Content Area
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.GraphicEq,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = DeepNavyCharcoal
+                )
 
-            Text(
-                text = "Measure surrounding noise",
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center
-            )
+                Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Measure\nsurrounding noise",
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                    color = DeepNavyCharcoal,
+                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight
+                )
 
-            Text(
-                text = "Creates a timestamped 60-second noise reading with your location.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Creates a timestamped 60-second noise reading with your location.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                if (permissionDeniedMessage != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Text(
+                            text = permissionDeniedMessage!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Button(
+                    onClick = {
+                        val status = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECORD_AUDIO
+                        )
+                        if (status == PackageManager.PERMISSION_GRANTED) {
+                            permissionDeniedMessage = null
+                            onStartMeasurement()
+                        } else {
+                            showPermissionDialog = true
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(25.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MutedAmberGold,
+                        contentColor = DeepNavyCharcoal
+                    )
+                ) {
+                    Text(
+                        text = "START MEASUREMENT",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(
-                onClick = { /* Action not implemented yet */ },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "START MEASUREMENT")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+            // Bottom Disclaimer
             Text(
-                text = "Phone measurements are indicative, not certified.",
+                text = "Phone measurements are indicative,\nnot certified.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
         }
     }
