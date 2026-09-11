@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.noisewatch.data.IncidentRepository
 import com.example.noisewatch.data.local.NoiseWatchDatabase
 import com.example.noisewatch.model.Incident
+import com.example.noisewatch.photo.PhotoStorageManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -33,6 +34,15 @@ class IncidentViewModel(application: Application) : AndroidViewModel(application
     fun getIncidentById(id: Long) = repository.getIncidentById(id)
 
     suspend fun deleteAllIncidents() {
+        PhotoStorageManager.clearAllPhotos(getApplication())
         repository.deleteAllIncidents()
+    }
+
+    suspend fun deleteIncidentById(id: Long) {
+        val incident = repository.getIncidentByIdSync(id)
+        if (incident?.photoUri != null) {
+            PhotoStorageManager.deletePhoto(getApplication(), incident.photoUri)
+        }
+        repository.deleteIncidentById(id)
     }
 }

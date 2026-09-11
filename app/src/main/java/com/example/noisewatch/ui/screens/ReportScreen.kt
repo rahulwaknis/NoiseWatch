@@ -42,9 +42,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
 import com.example.noisewatch.ui.theme.MutedAmberGold
 import com.example.noisewatch.ui.theme.PaleSlateBlue
@@ -306,6 +309,27 @@ fun ReportScreen(
                             text = incident.notes,
                             style = MaterialTheme.typography.bodyMedium,
                             color = DeepNavyCharcoal
+                        )
+                    }
+                }
+
+                if (!incident.photoUri.isNullOrBlank()) {
+                    HorizontalDivider()
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Photo",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepNavyCharcoal
+                        )
+                        AsyncImage(
+                            model = incident.photoUri,
+                            contentDescription = "Saved incident photo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
                         )
                     }
                 }
