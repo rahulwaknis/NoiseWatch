@@ -1,6 +1,7 @@
 package com.example.noisewatch.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -53,23 +55,36 @@ fun MeasureScreen(
     onStartMeasurement: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var showPermissionDialog by remember { mutableStateOf(false) }
+    var showMicDialog by remember { mutableStateOf(false) }
+    var showLocationDialog by remember { mutableStateOf(false) }
     var permissionDeniedMessage by remember { mutableStateOf<String?>(null) }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        // Continue to measurement whether location permission was granted or denied
+        onStartMeasurement()
+    }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             permissionDeniedMessage = null
-            onStartMeasurement()
+            // Check location permission next
+            if (hasLocationPermission(context)) {
+                onStartMeasurement()
+            } else {
+                showLocationDialog = true
+            }
         } else {
             permissionDeniedMessage = "Microphone permission is required to measure sound levels. Please grant permission to take a measurement."
         }
     }
 
-    if (showPermissionDialog) {
+    if (showMicDialog) {
         AlertDialog(
-            onDismissRequest = { showPermissionDialog = false },
+            onDismissRequest = { showMicDialog = false },
             icon = {
                 Icon(
                     imageVector = Icons.Default.Mic,
@@ -86,8 +101,8 @@ fun MeasureScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showPermissionDialog = false
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        showMicDialog = false
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
                 ) {
                     Text(text = "Continue")
@@ -95,9 +110,56 @@ fun MeasureScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showPermissionDialog = false }
+                    onClick = { showMicDialog = false }
                 ) {
                     Text(text = "Cancel")
+                }
+            }
+        )
+    }
+
+    if (showLocationDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showLocationDialog = false
+                onStartMeasurement()
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(text = "Add Location to Incident?")
+            },
+            text = {
+                Text(text = "NoiseWatch can add your location to the incident report. Location is used only for the current measurement and saved locally with the incident.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLocationDialog = false
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                ) {
+                    Text(text = "Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showLocationDialog = false
+                        onStartMeasurement()
+                    }
+                ) {
+                    Text(text = "Skip")
                 }
             }
         )
@@ -201,15 +263,18 @@ fun MeasureScreen(
 
                 Button(
                     onClick = {
-                        val status = ContextCompat.checkSelfPermission(
+                        val hasMic = ContextCompat.checkSelfPermission(
                             context,
                             Manifest.permission.RECORD_AUDIO
-                        )
-                        if (status == PackageManager.PERMISSION_GRANTED) {
+                        ) == PackageManager.PERMISSION_GRANTED
+
+                        if (!hasMic) {
+                            showMicDialog = true
+                        } else if (!hasLocationPermission(context)) {
+                            showLocationDialog = true
+                        } else {
                             permissionDeniedMessage = null
                             onStartMeasurement()
-                        } else {
-                            showPermissionDialog = true
                         }
                     },
                     modifier = Modifier
@@ -230,4 +295,10 @@ fun MeasureScreen(
             }
         }
     }
+}
+
+private fun hasLocationPermission(context: Context): Boolean {
+    val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    return coarse || fine
 }

@@ -52,6 +52,7 @@ import com.example.noisewatch.ui.viewmodel.IncidentViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -243,11 +244,37 @@ fun ReportScreen(
                             color = DeepNavyCharcoal
                         )
                     }
+
+                    val hasCoords = incident.latitude != null && incident.longitude != null
+                    val primaryLocationText = incident.locality
+                        ?: incident.readableAddress
+                        ?: if (hasCoords) String.format(Locale.US, "%.4f, %.4f", incident.latitude, incident.longitude) else "Location not captured"
+
                     Text(
-                        text = incident.readableAddress ?: "Location not captured",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        text = primaryLocationText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (hasCoords) FontWeight.Medium else FontWeight.Normal,
+                        color = DeepNavyCharcoal
                     )
+
+                    if (hasCoords) {
+                        val subText = buildList {
+                            if (incident.locality != null || incident.readableAddress != null) {
+                                add(String.format(Locale.US, "%.4f, %.4f", incident.latitude, incident.longitude))
+                            }
+                            if (incident.locationAccuracyMeters != null) {
+                                add("Accuracy ±${incident.locationAccuracyMeters.roundToInt()} m")
+                            }
+                        }.joinToString("  •  ")
+
+                        if (subText.isNotEmpty()) {
+                            Text(
+                                text = subText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
                 }
 
                 HorizontalDivider()

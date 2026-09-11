@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [IncidentEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class NoiseWatchDatabase : RoomDatabase() {
@@ -15,6 +17,12 @@ abstract class NoiseWatchDatabase : RoomDatabase() {
     abstract fun incidentDao(): IncidentDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE incidents ADD COLUMN locationAccuracyMeters REAL")
+            }
+        }
+
         @Volatile
         private var INSTANCE: NoiseWatchDatabase? = null
 
@@ -25,6 +33,7 @@ abstract class NoiseWatchDatabase : RoomDatabase() {
                     NoiseWatchDatabase::class.java,
                     "noisewatch.db"
                 )
+                .addMigrations(MIGRATION_1_2)
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

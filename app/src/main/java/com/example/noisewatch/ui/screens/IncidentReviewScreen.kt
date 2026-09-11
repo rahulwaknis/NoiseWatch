@@ -2,7 +2,6 @@ package com.example.noisewatch.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,8 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -30,7 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -45,10 +43,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,6 +58,7 @@ import com.example.noisewatch.ui.theme.VeryPaleWarmAmber
 import com.example.noisewatch.ui.viewmodel.IncidentViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -337,6 +332,82 @@ fun IncidentReviewScreen(
                 }
             }
 
+            // Real Location Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = PaleSlateBlue.copy(alpha = 0.35f),
+                    contentColor = DeepNavyCharcoal
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = DeepNavyCharcoal,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Location",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepNavyCharcoal
+                        )
+                    }
+
+                    val hasCoords = measurement.latitude != null && measurement.longitude != null
+                    val primaryLocationText = measurement.locality
+                        ?: measurement.readableAddress
+                        ?: if (hasCoords) String.format(Locale.US, "%.4f, %.4f", measurement.latitude, measurement.longitude) else null
+
+                    if (hasCoords) {
+                        Text(
+                            text = primaryLocationText!!,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DeepNavyCharcoal
+                        )
+
+                        val details = buildList {
+                            if (measurement.locality != null || measurement.readableAddress != null) {
+                                add(String.format(Locale.US, "%.4f, %.4f", measurement.latitude, measurement.longitude))
+                            }
+                            if (measurement.locationAccuracyMeters != null) {
+                                add("Accuracy ±${measurement.locationAccuracyMeters.roundToInt()} m")
+                            }
+                        }.joinToString("  •  ")
+
+                        if (details.isNotEmpty()) {
+                            Text(
+                                text = details,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Location not captured",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepNavyCharcoal
+                        )
+                        Text(
+                            text = "You can still create this incident without location.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
+
             // Compact Dropdown Noise Source Selector
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 ExposedDropdownMenuBox(
@@ -381,17 +452,6 @@ fun IncidentReviewScreen(
                 shape = RoundedCornerShape(8.dp)
             )
 
-            // Photo Section
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Photo",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = DeepNavyCharcoal
-                )
-                DashedPhotoTile()
-            }
-
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
@@ -416,7 +476,12 @@ fun IncidentReviewScreen(
                                 maximumDb = measurement.maxDb,
                                 minimumDb = measurement.minDb,
                                 noiseSource = selectedSource,
-                                notes = notesText.ifBlank { null }
+                                notes = notesText.ifBlank { null },
+                                latitude = measurement.latitude,
+                                longitude = measurement.longitude,
+                                locationAccuracyMeters = measurement.locationAccuracyMeters,
+                                readableAddress = measurement.readableAddress,
+                                locality = measurement.locality
                             )
                             val newId = incidentViewModel.saveIncident(incident)
                             isSaving = false
@@ -466,52 +531,6 @@ fun IncidentReviewScreen(
                     fontWeight = FontWeight.Medium
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun DashedPhotoTile(
-    modifier: Modifier = Modifier
-) {
-    val outlineColor = MaterialTheme.colorScheme.outline
-    val strokeWidth = 1.dp
-    val dashWidth = 6.dp
-    val gapWidth = 4.dp
-
-    Box(
-        modifier = modifier
-            .size(width = 96.dp, height = 80.dp)
-            .drawBehind {
-                val strokePx = strokeWidth.toPx()
-                val dashPx = dashWidth.toPx()
-                val gapPx = gapWidth.toPx()
-                val pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, gapPx), 0f)
-                val cornerRadius = 8.dp.toPx()
-                drawRoundRect(
-                    color = outlineColor,
-                    style = Stroke(width = strokePx, pathEffect = pathEffect),
-                    cornerRadius = CornerRadius(cornerRadius, cornerRadius)
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.CameraAlt,
-                contentDescription = null,
-                tint = DeepNavyCharcoal,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Add Photo",
-                style = MaterialTheme.typography.labelSmall,
-                color = DeepNavyCharcoal
-            )
         }
     }
 }

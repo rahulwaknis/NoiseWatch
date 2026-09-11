@@ -14,6 +14,7 @@ data class Incident(
     val notes: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val locationAccuracyMeters: Float? = null,
     val readableAddress: String? = null,
     val locality: String? = null,
     val photoUri: String? = null
@@ -31,6 +32,7 @@ data class Incident(
             notes = notes,
             latitude = latitude,
             longitude = longitude,
+            locationAccuracyMeters = locationAccuracyMeters,
             readableAddress = readableAddress,
             locality = locality,
             photoUri = photoUri
@@ -51,6 +53,7 @@ data class Incident(
                 notes = entity.notes,
                 latitude = entity.latitude,
                 longitude = entity.longitude,
+                locationAccuracyMeters = entity.locationAccuracyMeters,
                 readableAddress = entity.readableAddress,
                 locality = entity.locality,
                 photoUri = entity.photoUri

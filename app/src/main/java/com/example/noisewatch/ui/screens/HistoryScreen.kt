@@ -132,6 +132,13 @@ fun HistoryScreen(
                     )
 
                     dateIncidents.forEach { incident ->
+                        val locationText = when {
+                            !incident.locality.isNullOrBlank() -> incident.locality
+                            !incident.readableAddress.isNullOrBlank() -> incident.readableAddress
+                            incident.latitude != null && incident.longitude != null -> "Location captured"
+                            else -> "Location not captured"
+                        }
+
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -159,7 +166,7 @@ fun HistoryScreen(
                                         color = MaterialTheme.colorScheme.outline
                                     )
                                     Text(
-                                        text = incident.locality ?: "Location not captured",
+                                        text = locationText,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium,
                                         color = DeepNavyCharcoal

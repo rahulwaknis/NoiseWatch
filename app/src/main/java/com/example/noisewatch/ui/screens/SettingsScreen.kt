@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
 import com.example.noisewatch.ui.theme.MutedBrickRed
 import com.example.noisewatch.ui.theme.PaleSlateBlue
@@ -222,10 +223,10 @@ private fun SettingsCard(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                 fontWeight = FontWeight.Bold,
                 color = DeepNavyCharcoal,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
             content()
         }

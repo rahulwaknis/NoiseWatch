@@ -17,6 +17,7 @@ data class IncidentEntity(
     val notes: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val locationAccuracyMeters: Float? = null,
     val readableAddress: String? = null,
     val locality: String? = null,
     val photoUri: String? = null

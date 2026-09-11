@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -30,6 +31,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -40,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.noisewatch.model.MeasurementData
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
 import com.example.noisewatch.ui.theme.MutedAmberGold
+import com.example.noisewatch.ui.theme.MutedBrickRed
 import com.example.noisewatch.ui.theme.PaleSlateBlue
 import com.example.noisewatch.ui.viewmodel.MeasuringViewModel
 import java.util.Locale
@@ -53,6 +58,7 @@ fun MeasuringScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showCancelDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.startMeasurement()
@@ -65,8 +71,7 @@ fun MeasuringScreen(
     }
 
     BackHandler {
-        viewModel.cancelMeasurement()
-        onCancelMeasurement()
+        showCancelDialog = true
     }
 
     LaunchedEffect(state.isFinished) {
@@ -74,6 +79,47 @@ fun MeasuringScreen(
             val data = viewModel.stopMeasurement()
             onMeasurementComplete(data)
         }
+    }
+
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = {
+                Text(text = "Cancel this measurement?")
+            },
+            text = {
+                Text(text = "The current measurement will be discarded.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCancelDialog = false
+                        viewModel.cancelMeasurement()
+                        onCancelMeasurement()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MutedBrickRed
+                    )
+                ) {
+                    Text(
+                        text = "Discard",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCancelDialog = false }
+                ) {
+                    Text(
+                        text = "Keep measuring",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -86,20 +132,6 @@ fun MeasuringScreen(
                         style = MaterialTheme.typography.headlineSmall,
                         color = DeepNavyCharcoal
                     )
-                },
-                navigationIcon = {
-                    TextButton(
-                        onClick = {
-                            viewModel.cancelMeasurement()
-                            onCancelMeasurement()
-                        }
-                    ) {
-                        Text(
-                            text = "Cancel",
-                            color = DeepNavyCharcoal,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -235,26 +267,48 @@ fun MeasuringScreen(
                 }
             }
 
-            // Full-width Amber STOP Button
-            Button(
-                onClick = {
-                    val data = viewModel.stopMeasurement()
-                    onMeasurementComplete(data)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(25.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MutedAmberGold,
-                    contentColor = DeepNavyCharcoal
-                )
+            // Thumb Zone Action Area: FINISH MEASUREMENT and Cancel measurement
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "STOP",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                // Primary Action: FINISH MEASUREMENT
+                Button(
+                    onClick = {
+                        val data = viewModel.stopMeasurement()
+                        onMeasurementComplete(data)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(25.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MutedAmberGold,
+                        contentColor = DeepNavyCharcoal
+                    )
+                ) {
+                    Text(
+                        text = "FINISH MEASUREMENT",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Secondary Action: Cancel measurement
+                TextButton(
+                    onClick = { showCancelDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MutedBrickRed
+                    )
+                ) {
+                    Text(
+                        text = "Cancel measurement",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
