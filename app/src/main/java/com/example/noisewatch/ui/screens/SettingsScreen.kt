@@ -3,6 +3,7 @@ package com.example.noisewatch.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,21 +12,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
 import com.example.noisewatch.ui.theme.MutedBrickRed
+import com.example.noisewatch.ui.theme.PaleSlateBlue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,11 +108,11 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Section 1: Complaint Recipients
-            SettingsSection(title = "Complaint Recipients") {
+            // Card 1: Complaint Recipients
+            SettingsCard(title = "Complaint Recipients") {
                 RecipientRow(
                     name = "Pune Police Commissioner",
                     email = "punepolicecom@gmail.com",
@@ -126,8 +128,8 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
                         .clickable { /* Add recipient placeholder */ }
+                        .padding(vertical = 8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -136,7 +138,7 @@ fun SettingsScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Add recipient",
+                        text = "+ Add recipient",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = DeepNavyCharcoal
@@ -144,24 +146,24 @@ fun SettingsScreen(
                 }
             }
 
-            // Section 2: Measurement
-            SettingsSection(title = "Measurement") {
-                InfoRow(
-                    icon = Icons.Default.GraphicEq,
-                    text = "Reporting threshold: 75 dB(A)"
+            // Card 2: Measurement
+            SettingsCard(title = "Measurement") {
+                MeasurementInfoRow(
+                    label = "Reporting threshold",
+                    value = "75 dB(A)"
                 )
-                InfoRow(
-                    icon = Icons.Default.Warning,
-                    text = "Calibration: Not calibrated"
+                MeasurementInfoRow(
+                    label = "Calibration",
+                    value = "Not calibrated"
                 )
-                InfoRow(
-                    icon = Icons.Default.Timer,
-                    text = "Measurement duration: 60 seconds"
+                MeasurementInfoRow(
+                    label = "Measurement duration",
+                    value = "60 seconds"
                 )
             }
 
-            // Section 3: Privacy
-            SettingsSection(title = "Privacy") {
+            // Card 3: Privacy
+            SettingsCard(title = "Privacy") {
                 ActionRow(
                     icon = Icons.Default.Lock,
                     text = "Manage permissions"
@@ -175,8 +177,8 @@ fun SettingsScreen(
                 )
             }
 
-            // Section 4: About
-            SettingsSection(title = "About") {
+            // Card 4: About
+            SettingsCard(title = "About") {
                 ActionRow(
                     icon = Icons.Default.Info,
                     text = "Measurement disclaimer"
@@ -189,9 +191,9 @@ fun SettingsScreen(
                     icon = Icons.Default.Info,
                     text = "Privacy information"
                 )
-                InfoRow(
-                    icon = Icons.Default.Info,
-                    text = "App version 1.0"
+                MeasurementInfoRow(
+                    label = "App version",
+                    value = "1.0"
                 )
             }
 
@@ -201,18 +203,32 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSection(
+private fun SettingsCard(
     title: String,
-    content: @Composable () -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = DeepNavyCharcoal
-        )
-        content()
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PaleSlateBlue.copy(alpha = 0.35f),
+            contentColor = DeepNavyCharcoal
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = DeepNavyCharcoal,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+            content()
+        }
     }
 }
 
@@ -263,26 +279,26 @@ private fun RecipientRow(
 }
 
 @Composable
-private fun InfoRow(
-    icon: ImageVector,
-    text: String
+private fun MeasurementInfoRow(
+    label: String,
+    value: String
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = DeepNavyCharcoal,
-            modifier = Modifier.size(20.dp)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = DeepNavyCharcoal
         )
         Text(
-            text = text,
+            text = value,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
             color = DeepNavyCharcoal
         )
     }

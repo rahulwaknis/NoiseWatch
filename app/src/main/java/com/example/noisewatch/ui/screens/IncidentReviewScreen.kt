@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
@@ -75,15 +74,16 @@ fun IncidentReviewScreen(
     onCancelReview: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
     BackHandler {
-        onCancelReview()
+        showDiscardDialog = true
     }
 
     val coroutineScope = rememberCoroutineScope()
     var selectedSource by remember { mutableStateOf<String?>(null) }
     var dropdownExpanded by remember { mutableStateOf(false) }
     var notesText by remember { mutableStateOf("") }
-    var showDiscardDialog by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var saveErrorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -143,15 +143,6 @@ fun IncidentReviewScreen(
                         style = MaterialTheme.typography.titleLarge,
                         color = DeepNavyCharcoal
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onCancelReview) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = DeepNavyCharcoal
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background

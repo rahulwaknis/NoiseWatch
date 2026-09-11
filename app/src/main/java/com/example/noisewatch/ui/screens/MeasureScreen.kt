@@ -124,18 +124,18 @@ fun MeasureScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Main Content Area
+            // Main Central Content Area with generous whitespace
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
-                modifier = Modifier.weight(1f, fill = false)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
             ) {
                 Icon(
                     imageVector = Icons.Default.GraphicEq,
@@ -144,7 +144,7 @@ fun MeasureScreen(
                     tint = DeepNavyCharcoal
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
                     text = "Measure\nsurrounding noise",
@@ -181,8 +181,23 @@ fun MeasureScreen(
                         )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(28.dp))
+            // Bottom Thumb Zone Area: Disclaimer & Primary CTA
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
+            ) {
+                Text(
+                    text = "Phone measurements are indicative,\nnot certified.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
                     onClick = {
@@ -213,17 +228,6 @@ fun MeasureScreen(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Bottom Disclaimer
-            Text(
-                text = "Phone measurements are indicative,\nnot certified.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
         }
     }
 }
