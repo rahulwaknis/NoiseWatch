@@ -1,5 +1,7 @@
 package com.example.noisewatch.ui.screens
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -33,11 +35,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,17 +63,24 @@ fun MeasuringScreen(
     onCancelMeasurement: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val state by viewModel.uiState.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
+    var hasHandledCompletion by rememberSaveable { mutableStateOf(false) }
+
+    // Keep screen awake ONLY while MeasuringScreen is in composition
+    DisposableEffect(Unit) {
+        val window = (context as? Activity)?.window
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            viewModel.cancelMeasurement()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.startMeasurement()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.cancelMeasurement()
-        }
     }
 
     BackHandler {
@@ -75,7 +88,8 @@ fun MeasuringScreen(
     }
 
     LaunchedEffect(state.isFinished) {
-        if (state.isFinished) {
+        if (state.isFinished && !hasHandledCompletion) {
+            hasHandledCompletion = true
             val data = viewModel.stopMeasurement()
             onMeasurementComplete(data)
         }
@@ -276,8 +290,12 @@ fun MeasuringScreen(
                 // Primary Action: FINISH MEASUREMENT
                 Button(
                     onClick = {
-                        val data = viewModel.stopMeasurement()
-                        onMeasurementComplete(data)
+                        if (!hasHandledCompletion) {
+                            hasHandledCompletion = true
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            val data = viewModel.stopMeasurement()
+                            onMeasurementComplete(data)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

@@ -60,8 +60,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,6 +81,7 @@ import com.example.noisewatch.ui.theme.PaleSlateBlue
 import com.example.noisewatch.ui.theme.RestrainedAmber
 import com.example.noisewatch.ui.theme.VeryPaleWarmAmber
 import com.example.noisewatch.ui.viewmodel.IncidentViewModel
+import com.example.noisewatch.ui.viewmodel.MeasuringViewModel
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -89,12 +92,25 @@ import kotlin.math.roundToInt
 fun IncidentReviewScreen(
     measurement: MeasurementData,
     incidentViewModel: IncidentViewModel,
+    measuringViewModel: MeasuringViewModel,
     onIncidentSaved: (Long) -> Unit,
     onCancelReview: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     var showDiscardDialog by remember { mutableStateOf(false) }
+
+    var currentPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var rawPhotoPathToCrop by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun performDiscard() {
+        showDiscardDialog = false
+        PhotoStorageManager.deletePhoto(context, currentPhotoUri)
+        PhotoStorageManager.deletePhoto(context, rawPhotoPathToCrop)
+        measuringViewModel.discardCurrentSession()
+        onCancelReview()
+    }
 
     BackHandler {
         showDiscardDialog = true
@@ -107,8 +123,6 @@ fun IncidentReviewScreen(
     var isSaving by remember { mutableStateOf(false) }
     var saveErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    var currentPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var rawPhotoPathToCrop by rememberSaveable { mutableStateOf<String?>(null) }
     var tempFile by remember { mutableStateOf<File?>(null) }
     var cameraPermissionDeniedMessage by remember { mutableStateOf<String?>(null) }
 
@@ -225,11 +239,7 @@ fun IncidentReviewScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        showDiscardDialog = false
-                        PhotoStorageManager.deletePhoto(context, currentPhotoUri)
-                        onCancelReview()
-                    },
+                    onClick = { performDiscard() },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MutedBrickRed
                     )
@@ -676,6 +686,7 @@ fun IncidentReviewScreen(
             Button(
                 onClick = {
                     if (isSaving) return@Button
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     isSaving = true
                     saveErrorMessage = null
                     coroutineScope.launch {
@@ -729,7 +740,7 @@ fun IncidentReviewScreen(
             }
 
             TextButton(
-                onClick = { showDiscardDialog = true },
+                onClick = { performDiscard() },
                 enabled = !isSaving,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.textButtonColors(

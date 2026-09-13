@@ -2,5 +2,7 @@
 <resources>
     <style name="Theme.NoiseWatch" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#F7F3E8</item>
+        <item name="android:windowSplashScreenBackground">#F7F3E8</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
     </style>
 </resources>

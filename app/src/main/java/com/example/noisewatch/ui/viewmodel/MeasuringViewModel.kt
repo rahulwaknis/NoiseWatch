@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 class MeasuringViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val engine = AudioNoiseEngine()
+    private val engine = AudioNoiseEngine(application)
     val uiState: StateFlow<AudioMeasurementState> = engine.state
 
     private val locationProvider = LocationProvider(application)
@@ -26,9 +26,7 @@ class MeasuringViewModel(application: Application) : AndroidViewModel(applicatio
     private var locationJob: Job? = null
 
     fun startMeasurement() {
-        cancelMeasurement() // Clean up any existing session
-
-        capturedLocationData = null
+        discardCurrentSession() // Ensure complete cleanup of any previous session
 
         // Audio capture
         captureJob = viewModelScope.launch {
@@ -74,7 +72,7 @@ class MeasuringViewModel(application: Application) : AndroidViewModel(applicatio
         )
     }
 
-    fun cancelMeasurement() {
+    fun discardCurrentSession() {
         timerJob?.cancel()
         timerJob = null
         captureJob?.cancel()
@@ -83,11 +81,16 @@ class MeasuringViewModel(application: Application) : AndroidViewModel(applicatio
         locationJob = null
 
         locationProvider.stopLocationUpdates()
-        engine.stopCapture()
+        capturedLocationData = null
+        engine.resetSession()
+    }
+
+    fun cancelMeasurement() {
+        discardCurrentSession()
     }
 
     override fun onCleared() {
         super.onCleared()
-        cancelMeasurement()
+        discardCurrentSession()
     }
 }

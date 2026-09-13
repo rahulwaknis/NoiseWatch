@@ -1,5 +1,6 @@
 package com.example.noisewatch.ui.screens
 
+import android.util.Patterns
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
@@ -30,7 +32,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,9 +48,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.noisewatch.data.ComplaintPreferences
+import com.example.noisewatch.data.ComplaintRecipient
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
 import com.example.noisewatch.ui.theme.MutedBrickRed
 import com.example.noisewatch.ui.theme.PaleSlateBlue
@@ -57,8 +64,28 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onDeleteHistory: () -> Unit = {}
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val complaintPrefs = remember { ComplaintPreferences(context) }
 
+    var recipients by remember { mutableStateOf(complaintPrefs.getRecipients()) }
+    var defaultSubject by remember { mutableStateOf(complaintPrefs.getDefaultSubject()) }
+    var defaultBody by remember { mutableStateOf(complaintPrefs.getDefaultBody()) }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showRecipientDialog by remember { mutableStateOf(false) }
+    var editingRecipient by remember { mutableStateOf<ComplaintRecipient?>(null) }
+
+    var recipientNameInput by remember { mutableStateOf("") }
+    var recipientEmailInput by remember { mutableStateOf("") }
+    var recipientEmailError by remember { mutableStateOf<String?>(null) }
+
+    var showSubjectDialog by remember { mutableStateOf(false) }
+    var subjectInput by remember { mutableStateOf("") }
+
+    var showBodyDialog by remember { mutableStateOf(false) }
+    var bodyInput by remember { mutableStateOf("") }
+
+    // Delete History Dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -70,18 +97,181 @@ fun SettingsScreen(
                         showDeleteDialog = false
                         onDeleteHistory()
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MutedBrickRed
-                    )
+                    colors = ButtonDefaults.textButtonColors(contentColor = MutedBrickRed)
                 ) {
                     Text(text = "Delete")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showDeleteDialog = false }
-                ) {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text(text = "Cancel")
+                }
+            }
+        )
+    }
+
+    // Add / Edit Recipient Dialog
+    if (showRecipientDialog) {
+        AlertDialog(
+            onDismissRequest = { showRecipientDialog = false },
+            title = {
+                Text(text = if (editingRecipient == null) "Add Recipient" else "Edit Recipient")
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = recipientNameInput,
+                        onValueChange = { recipientNameInput = it },
+                        label = { Text("Name / Authority (e.g., Police)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    OutlinedTextField(
+                        value = recipientEmailInput,
+                        onValueChange = {
+                            recipientEmailInput = it
+                            recipientEmailError = null
+                        },
+                        label = { Text("Email address") },
+                        isError = recipientEmailError != null,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    if (recipientEmailError != null) {
+                        Text(
+                            text = recipientEmailError!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val emailTrimmed = recipientEmailInput.trim()
+                        if (emailTrimmed.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(emailTrimmed).matches()) {
+                            recipientEmailError = "Please enter a valid email address."
+                            return@TextButton
+                        }
+
+                        val updatedList = recipients.toMutableList()
+                        if (editingRecipient == null) {
+                            updatedList.add(
+                                ComplaintRecipient(
+                                    id = System.currentTimeMillis().toString(),
+                                    name = recipientNameInput.trim().ifBlank { "Authority" },
+                                    email = emailTrimmed
+                                )
+                            )
+                        } else {
+                            val index = updatedList.indexOfFirst { it.id == editingRecipient!!.id }
+                            if (index != -1) {
+                                updatedList[index] = ComplaintRecipient(
+                                    id = editingRecipient!!.id,
+                                    name = recipientNameInput.trim().ifBlank { "Authority" },
+                                    email = emailTrimmed
+                                )
+                            }
+                        }
+                        recipients = updatedList
+                        complaintPrefs.saveRecipients(updatedList)
+                        showRecipientDialog = false
+                    }
+                ) {
+                    Text(text = "Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecipientDialog = false }) {
+                    Text(text = "Cancel")
+                }
+            }
+        )
+    }
+
+    // Edit Subject Dialog
+    if (showSubjectDialog) {
+        AlertDialog(
+            onDismissRequest = { showSubjectDialog = false },
+            title = { Text("Default Email Subject") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Placeholders: {date}, {time}, {location}, {laeq}, {max}, {min}, {duration}, {source}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    OutlinedTextField(
+                        value = subjectInput,
+                        onValueChange = { subjectInput = it },
+                        label = { Text("Subject template") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val trimmed = subjectInput.trim()
+                        if (trimmed.isNotBlank()) {
+                            defaultSubject = trimmed
+                            complaintPrefs.saveDefaultSubject(trimmed)
+                        }
+                        showSubjectDialog = false
+                    }
+                ) {
+                    Text("Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSubjectDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Edit Body Dialog
+    if (showBodyDialog) {
+        AlertDialog(
+            onDismissRequest = { showBodyDialog = false },
+            title = { Text("Default Email Body") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Placeholders: {date}, {time}, {location}, {laeq}, {max}, {min}, {duration}, {source}, {notes}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    OutlinedTextField(
+                        value = bodyInput,
+                        onValueChange = { bodyInput = it },
+                        label = { Text("Body template") },
+                        minLines = 6,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val trimmed = bodyInput.trim()
+                        if (trimmed.isNotBlank()) {
+                            defaultBody = trimmed
+                            complaintPrefs.saveDefaultBody(trimmed)
+                        }
+                        showBodyDialog = false
+                    }
+                ) {
+                    Text("Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBodyDialog = false }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -114,22 +304,47 @@ fun SettingsScreen(
         ) {
             // Card 1: Complaint Recipients
             SettingsCard(title = "Complaint Recipients") {
-                RecipientRow(
-                    name = "Pune Police Commissioner",
-                    email = "punepolicecom@gmail.com",
-                    icon = Icons.Default.Person
-                )
-                RecipientRow(
-                    name = "MPCB",
-                    email = "mpcb.nom@gmail.com",
-                    icon = Icons.Default.Email
-                )
+                if (recipients.isEmpty()) {
+                    Text(
+                        text = "No saved recipients. Add recipient email addresses below.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                } else {
+                    recipients.forEach { recipient ->
+                        RecipientRow(
+                            name = recipient.name,
+                            email = recipient.email,
+                            icon = Icons.Default.Person,
+                            onEdit = {
+                                editingRecipient = recipient
+                                recipientNameInput = recipient.name
+                                recipientEmailInput = recipient.email
+                                recipientEmailError = null
+                                showRecipientDialog = true
+                            },
+                            onDelete = {
+                                val updatedList = recipients.filterNot { it.id == recipient.id }
+                                recipients = updatedList
+                                complaintPrefs.saveRecipients(updatedList)
+                            }
+                        )
+                    }
+                }
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { /* Add recipient placeholder */ }
+                        .clickable {
+                            editingRecipient = null
+                            recipientNameInput = ""
+                            recipientEmailInput = ""
+                            recipientEmailError = null
+                            showRecipientDialog = true
+                        }
                         .padding(vertical = 8.dp)
                 ) {
                     Icon(
@@ -147,7 +362,80 @@ fun SettingsScreen(
                 }
             }
 
-            // Card 2: Measurement
+            // Card 2: Email Templates
+            SettingsCard(title = "Email Templates") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            subjectInput = defaultSubject
+                            showSubjectDialog = true
+                        }
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Default email subject",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepNavyCharcoal
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Subject",
+                            tint = DeepNavyCharcoal,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = defaultSubject,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            bodyInput = defaultBody
+                            showBodyDialog = true
+                        }
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Default email body",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepNavyCharcoal
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Body",
+                            tint = DeepNavyCharcoal,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = defaultBody.lines().firstOrNull() ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            // Card 3: Measurement
             SettingsCard(title = "Measurement") {
                 MeasurementInfoRow(
                     label = "Reporting threshold",
@@ -163,7 +451,7 @@ fun SettingsScreen(
                 )
             }
 
-            // Card 3: Privacy
+            // Card 4: Privacy
             SettingsCard(title = "Privacy") {
                 ActionRow(
                     icon = Icons.Default.Lock,
@@ -178,7 +466,7 @@ fun SettingsScreen(
                 )
             }
 
-            // Card 4: About
+            // Card 5: About
             SettingsCard(title = "About") {
                 ActionRow(
                     icon = Icons.Default.Info,
@@ -237,7 +525,9 @@ private fun SettingsCard(
 private fun RecipientRow(
     name: String,
     email: String,
-    icon: ImageVector
+    icon: ImageVector,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -248,7 +538,8 @@ private fun RecipientRow(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
         ) {
             Icon(
                 imageVector = icon,
@@ -270,12 +561,24 @@ private fun RecipientRow(
                 )
             }
         }
-        Icon(
-            imageVector = Icons.Default.Edit,
-            contentDescription = "Edit",
-            tint = DeepNavyCharcoal,
-            modifier = Modifier.size(18.dp)
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = DeepNavyCharcoal,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MutedBrickRed,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
     }
 }
 

@@ -3,6 +3,7 @@ package com.example.noisewatch.ui.navigation
 import com.example.noisewatch.model.MeasurementData
 
 sealed interface Screen {
+    data object Onboarding : Screen
     data object Measure : Screen
     data object History : Screen
     data object Settings : Screen
