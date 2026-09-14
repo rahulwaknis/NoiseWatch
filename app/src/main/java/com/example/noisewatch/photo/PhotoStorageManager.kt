@@ -74,7 +74,7 @@ object PhotoStorageManager {
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
             }
             bitmap.recycle()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // If optimization fails, leave raw image untouched
         }
     }
@@ -165,7 +165,7 @@ object PhotoStorageManager {
             }
 
             outputFile
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -173,24 +173,22 @@ object PhotoStorageManager {
     fun deletePhoto(context: Context, photoUriString: String?) {
         if (photoUriString.isNullOrBlank()) return
         try {
-            val uri = Uri.parse(photoUriString)
-            if (uri.scheme == "file") {
-                val file = File(uri.path ?: return)
-                if (file.exists() && file.canonicalPath.startsWith(context.filesDir.canonicalPath)) {
-                    file.delete()
-                }
+            val fileToDelete = if (photoUriString.startsWith("/")) {
+                File(photoUriString)
             } else {
-                val photosDir = File(context.filesDir, PHOTOS_FOLDER)
-                val lastSegment = uri.lastPathSegment
-                if (!lastSegment.isNullOrBlank()) {
-                    val fileName = lastSegment.substringAfterLast("/")
-                    val file = File(photosDir, fileName)
-                    if (file.exists()) {
-                        file.delete()
-                    }
+                val uri = Uri.parse(photoUriString)
+                if (uri.scheme == "file") {
+                    File(uri.path ?: return)
+                } else {
+                    val photosDir = File(context.filesDir, PHOTOS_FOLDER)
+                    val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: return
+                    File(photosDir, fileName)
                 }
             }
-        } catch (e: Exception) {
+            if (fileToDelete.exists() && fileToDelete.canonicalPath.startsWith(context.filesDir.canonicalPath)) {
+                fileToDelete.delete()
+            }
+        } catch (_: Exception) {
             // Ignore deletion errors
         }
     }
@@ -203,7 +201,7 @@ object PhotoStorageManager {
                     file.delete()
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Ignore clear errors
         }
     }

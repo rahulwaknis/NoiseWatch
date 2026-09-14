@@ -8,6 +8,10 @@ sealed interface Screen {
     data object History : Screen
     data object Settings : Screen
 
+    data object MeasurementDisclaimer : Screen
+    data object NoisePollutionRules : Screen
+    data object PrivacyInformation : Screen
+
     data object Measuring : Screen
     data class IncidentReview(val measurement: MeasurementData) : Screen
     data class Report(val incidentId: Long) : Screen

@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -88,6 +89,13 @@ fun CropPhotoScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            bitmap?.recycle()
+            bitmap = null
+        }
+    }
 
     BackHandler {
         onCancel()
@@ -433,7 +441,7 @@ private fun loadRotatedBitmap(filePath: String): Bitmap? {
             }
         }
         bitmap
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 }

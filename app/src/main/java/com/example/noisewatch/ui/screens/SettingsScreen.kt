@@ -1,6 +1,11 @@
 package com.example.noisewatch.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.util.Patterns
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -62,7 +66,10 @@ import com.example.noisewatch.ui.theme.PaleSlateBlue
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    onDeleteHistory: () -> Unit = {}
+    onDeleteHistory: () -> Unit = {},
+    onNavigateToDisclaimer: () -> Unit = {},
+    onNavigateToNoiseRules: () -> Unit = {},
+    onNavigateToPrivacyInfo: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val complaintPrefs = remember { ComplaintPreferences(context) }
@@ -241,7 +248,7 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Placeholders: {date}, {time}, {location}, {laeq}, {max}, {min}, {duration}, {source}, {notes}",
+                        text = "Placeholders: {date}, {time}, {location}, {latitude}, {longitude}, {accuracy}, {laeq}, {max}, {min}, {duration}, {source}, {notes}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -455,7 +462,8 @@ fun SettingsScreen(
             SettingsCard(title = "Privacy") {
                 ActionRow(
                     icon = Icons.Default.Lock,
-                    text = "Manage permissions"
+                    text = "Manage permissions",
+                    onClick = { openAppSystemSettings(context) }
                 )
                 ActionRow(
                     icon = Icons.Default.Security,
@@ -470,15 +478,18 @@ fun SettingsScreen(
             SettingsCard(title = "About") {
                 ActionRow(
                     icon = Icons.Default.Info,
-                    text = "Measurement disclaimer"
+                    text = "Measurement disclaimer",
+                    onClick = onNavigateToDisclaimer
                 )
                 ActionRow(
                     icon = Icons.AutoMirrored.Filled.Article,
-                    text = "Noise pollution rules"
+                    text = "Noise pollution rules",
+                    onClick = onNavigateToNoiseRules
                 )
                 ActionRow(
                     icon = Icons.Default.Info,
-                    text = "Privacy information"
+                    text = "Privacy information",
+                    onClick = onNavigateToPrivacyInfo
                 )
                 MeasurementInfoRow(
                     label = "App version",
@@ -488,6 +499,18 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+private fun openAppSystemSettings(context: Context) {
+    try {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        Toast.makeText(context, "Unable to open app settings.", Toast.LENGTH_SHORT).show()
     }
 }
 

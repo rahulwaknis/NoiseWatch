@@ -23,8 +23,11 @@ import com.example.noisewatch.data.OnboardingPreferences
 import com.example.noisewatch.ui.screens.HistoryScreen
 import com.example.noisewatch.ui.screens.IncidentReviewScreen
 import com.example.noisewatch.ui.screens.MeasureScreen
+import com.example.noisewatch.ui.screens.MeasurementDisclaimerScreen
 import com.example.noisewatch.ui.screens.MeasuringScreen
+import com.example.noisewatch.ui.screens.NoiseRulesScreen
 import com.example.noisewatch.ui.screens.OnboardingScreen
+import com.example.noisewatch.ui.screens.PrivacyInfoScreen
 import com.example.noisewatch.ui.screens.ReportScreen
 import com.example.noisewatch.ui.screens.SettingsScreen
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
@@ -53,7 +56,7 @@ fun NoiseWatchApp(
 
     val showBottomBar = when (currentScreen) {
         Screen.Measure, Screen.History, Screen.Settings -> true
-        Screen.Onboarding, Screen.Measuring, is Screen.IncidentReview, is Screen.Report -> false
+        Screen.Onboarding, Screen.Measuring, Screen.MeasurementDisclaimer, Screen.NoisePollutionRules, Screen.PrivacyInformation, is Screen.IncidentReview, is Screen.Report -> false
     }
 
     val currentTopLevelDestination = when (currentScreen) {
@@ -136,7 +139,28 @@ fun NoiseWatchApp(
                     coroutineScope.launch {
                         incidentViewModel.deleteAllIncidents()
                     }
+                },
+                onNavigateToDisclaimer = {
+                    currentScreen = Screen.MeasurementDisclaimer
+                },
+                onNavigateToNoiseRules = {
+                    currentScreen = Screen.NoisePollutionRules
+                },
+                onNavigateToPrivacyInfo = {
+                    currentScreen = Screen.PrivacyInformation
                 }
+            )
+            Screen.MeasurementDisclaimer -> MeasurementDisclaimerScreen(
+                onBack = { currentScreen = Screen.Settings },
+                modifier = screenModifier
+            )
+            Screen.NoisePollutionRules -> NoiseRulesScreen(
+                onBack = { currentScreen = Screen.Settings },
+                modifier = screenModifier
+            )
+            Screen.PrivacyInformation -> PrivacyInfoScreen(
+                onBack = { currentScreen = Screen.Settings },
+                modifier = screenModifier
             )
             Screen.Measuring -> MeasuringScreen(
                 modifier = screenModifier,
