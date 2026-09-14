@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
@@ -37,10 +38,12 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +71,7 @@ import com.example.noisewatch.ui.theme.MutedAmberGold
 import com.example.noisewatch.ui.theme.PaleSlateBlue
 import com.example.noisewatch.ui.theme.RestrainedAmber
 import com.example.noisewatch.ui.theme.VeryPaleWarmAmber
+import com.example.noisewatch.ui.theme.WarmIvory
 import com.example.noisewatch.ui.viewmodel.IncidentViewModel
 import com.example.noisewatch.util.TemplateMerger
 import kotlinx.coroutines.CoroutineScope
@@ -144,6 +149,7 @@ fun ReportScreen(
     val coroutineScope = rememberCoroutineScope()
     var isGeneratingPdf by remember { mutableStateOf(false) }
     var isPreparingEmail by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
 
     BackHandler {
         onBackToMeasure()
@@ -189,6 +195,81 @@ fun ReportScreen(
             }
         } else {
             val reportState = remember(incident) { incident.toReportUiState() }
+
+            // Material 3 Modal Bottom Sheet for Sharing Options
+            if (showShareSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showShareSheet = false },
+                    containerColor = WarmIvory,
+                    contentColor = DeepNavyCharcoal,
+                    sheetState = rememberModalBottomSheetState()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Share Incident",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepNavyCharcoal,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+
+                        // 1. Share Summary
+                        ShareSheetRow(
+                            title = "Share Summary",
+                            subtitle = "Short privacy-safe text for messaging/social apps",
+                            icon = Icons.AutoMirrored.Filled.Article,
+                            onClick = {
+                                showShareSheet = false
+                                launchShareSummary(context, reportState)
+                            }
+                        )
+
+                        HorizontalDivider(color = DeepNavyCharcoal.copy(alpha = 0.1f))
+
+                        // 2. Share Report
+                        ShareSheetRow(
+                            title = "Share Report",
+                            subtitle = "Full NoiseWatch PDF report",
+                            icon = Icons.Default.Share,
+                            onClick = {
+                                showShareSheet = false
+                                if (!isGeneratingPdf && !isPreparingEmail) {
+                                    isGeneratingPdf = true
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val pdfFile = PdfReportGenerator.generatePdfReport(context, reportState)
+                                        isGeneratingPdf = false
+                                        if (pdfFile != null) {
+                                            PdfReportGenerator.sharePdfReport(context, pdfFile)
+                                        }
+                                    }
+                                }
+                            }
+                        )
+
+                        HorizontalDivider(color = DeepNavyCharcoal.copy(alpha = 0.1f))
+
+                        // 3. Email Complaint
+                        ShareSheetRow(
+                            title = "Email Complaint",
+                            subtitle = "Prepared complaint email with PDF attached",
+                            icon = Icons.Default.Email,
+                            onClick = {
+                                showShareSheet = false
+                                if (!isPreparingEmail && !isGeneratingPdf) {
+                                    launchEmailComplaint(context, reportState, coroutineScope) { isPreparingEmail = it }
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -455,12 +536,9 @@ fun ReportScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Primary Action 1: EMAIL COMPLAINT
+                // SINGLE PRIMARY SHARE ACTION BUTTON
                 Button(
-                    onClick = {
-                        if (isPreparingEmail || isGeneratingPdf) return@Button
-                        launchEmailComplaint(context, reportState, coroutineScope) { isPreparingEmail = it }
-                    },
+                    onClick = { showShareSheet = true },
                     enabled = !isPreparingEmail && !isGeneratingPdf,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -471,51 +549,7 @@ fun ReportScreen(
                         contentColor = DeepNavyCharcoal
                     )
                 ) {
-                    if (isPreparingEmail) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = DeepNavyCharcoal,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "EMAIL COMPLAINT",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // Secondary Action 2: SHARE REPORT (Generates PDF & opens Android Share Sheet)
-                OutlinedButton(
-                    onClick = {
-                        if (isGeneratingPdf || isPreparingEmail) return@OutlinedButton
-                        isGeneratingPdf = true
-                        coroutineScope.launch(Dispatchers.IO) {
-                            val pdfFile = PdfReportGenerator.generatePdfReport(context, reportState)
-                            isGeneratingPdf = false
-                            if (pdfFile != null) {
-                                PdfReportGenerator.sharePdfReport(context, pdfFile)
-                            }
-                        }
-                    },
-                    enabled = !isGeneratingPdf && !isPreparingEmail,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(25.dp)
-                ) {
-                    if (isGeneratingPdf) {
+                    if (isPreparingEmail || isGeneratingPdf) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             color = DeepNavyCharcoal,
@@ -532,40 +566,11 @@ fun ReportScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "SHARE REPORT",
+                                text = "SHARE",
                                 style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = DeepNavyCharcoal
+                                fontWeight = FontWeight.Bold
                             )
                         }
-                    }
-                }
-
-                // Secondary Action 3: SHARE ON X
-                OutlinedButton(
-                    onClick = {
-                        launchShareOnX(context, reportState)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(25.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "SHARE ON X",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = DeepNavyCharcoal
-                        )
                     }
                 }
 
@@ -600,6 +605,43 @@ fun ReportScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ShareSheetRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = DeepNavyCharcoal,
+            modifier = Modifier.size(24.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = DeepNavyCharcoal
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
@@ -660,7 +702,7 @@ private fun launchEmailComplaint(
     }
 }
 
-private fun launchShareOnX(
+private fun launchShareSummary(
     context: Context,
     reportState: IncidentReportUiState
 ) {
@@ -670,10 +712,10 @@ private fun launchShareOnX(
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, text)
         }
-        val chooser = Intent.createChooser(shareIntent, "Share on X")
+        val chooser = Intent.createChooser(shareIntent, "Share Summary")
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     } catch (_: Exception) {
-        Toast.makeText(context, "Failed to share on X.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Failed to share summary.", Toast.LENGTH_SHORT).show()
     }
 }

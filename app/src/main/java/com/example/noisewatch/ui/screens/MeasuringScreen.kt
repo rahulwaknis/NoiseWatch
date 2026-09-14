@@ -46,8 +46,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.noisewatch.model.MeasurementData
+import com.example.noisewatch.ui.components.NoiseGauge
 import com.example.noisewatch.ui.theme.DeepNavyCharcoal
 import com.example.noisewatch.ui.theme.MutedAmberGold
 import com.example.noisewatch.ui.theme.MutedBrickRed
@@ -157,30 +157,22 @@ fun MeasuringScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Big Measurement Number
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text(
-                    text = String.format(Locale.US, "%.0f", state.currentDb),
-                    fontSize = 80.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepNavyCharcoal,
-                    lineHeight = 80.sp
-                )
-            }
+            // Live Decibel Gauge as Primary Visual Focus
+            NoiseGauge(
+                currentDb = state.currentDb.toFloat(),
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
-            // Thin Vertical Bar Sound Waveform
+            // Reduced-height Waveform
             ThinBarSoundVisualizer(
                 history = state.history,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
+                    .fillMaxWidth(0.9f)
+                    .height(48.dp)
             )
 
             // Side-by-side Analytical Cards (LAeq and Maximum)
@@ -199,7 +191,7 @@ fun MeasuringScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -207,7 +199,7 @@ fun MeasuringScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = DeepNavyCharcoal
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = String.format(Locale.US, "%.1f dB(A)", state.laeq),
                             style = MaterialTheme.typography.titleMedium,
@@ -228,7 +220,7 @@ fun MeasuringScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -236,7 +228,7 @@ fun MeasuringScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = DeepNavyCharcoal
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = String.format(Locale.US, "%.1f dB(A)", state.maxDb),
                             style = MaterialTheme.typography.titleMedium,
@@ -249,7 +241,7 @@ fun MeasuringScreen(
 
             // Elapsed Time
             Text(
-                text = String.format(Locale.US, "%d:%02d / 1:00", state.elapsedSeconds / 60, state.elapsedSeconds % 60),
+                text = String.format(Locale.US, "%02d:%02d / 01:00", state.elapsedSeconds / 60, state.elapsedSeconds % 60),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = DeepNavyCharcoal
@@ -263,7 +255,7 @@ fun MeasuringScreen(
                     )
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -285,7 +277,7 @@ fun MeasuringScreen(
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Primary Action: FINISH MEASUREMENT
                 Button(
